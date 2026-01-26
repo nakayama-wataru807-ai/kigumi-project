@@ -1,0 +1,102 @@
+{
+    "boundary_conditions": {
+        "dirichlet_boundary": [{
+            "id": 1,
+            "value": [0, 0, 0]
+        }],
+        "rhs": [0, 9.81, 0]
+    },
+    "common": "../../common.json",
+    "contact": {
+        "epsv": 1e-05,
+        "friction_coefficient": 0.49
+    },
+    "geometry": [{
+        "mesh": "../../../meshes/3D/kigumi/Koshikake-Kama_M.msh",
+        "transformation": {
+            "rotation": [0, 0, -26.565],
+            "scale": 1,
+            "translation": [0, 0, 0]
+        },
+        "volume_selection": 1
+    }, {
+        "mesh": "../../../meshes/3D/kigumi/Koshikake-Kama_F.msh",
+        "transformation": {
+            "rotation": [0, 0, -26.565],
+            "scale": 1,
+            "translation": [0, 0, 0]
+        },
+        "volume_selection": 1
+    },{
+        "mesh": "../../../meshes/3D/simple/cube.msh",
+        "surface_selection": 1,
+        "transformation": {
+            "dimensions": [10, 0.01, 10],
+            "rotation": [0, 0, -26.565],
+            "translation": [2, -1.566, 0]
+        },
+        "volume_selection": 2
+    }],
+    "materials": [{
+        "E": 1000000000.0,
+        "id": 1,
+        "nu": 0.4,
+        "rho": 1000,
+        "type": "NeoHookean"
+    }, {
+        "E": 1000000000.0,
+        "id": 1,
+        "nu": 0.4,
+        "rho": 1000,
+        "type": "NeoHookean"
+    }, {
+        "E": 200000000000.0,
+        "id": 2,
+        "nu": 0.3,
+        "rho": 7750,
+        "type": "NeoHookean"
+    }],
+    
+    "solver": {
+        "contact": {
+            "friction_convergence_tol": 0.01,
+            "friction_iterations": -1
+        }
+    },
+    "tests": {
+        "err_h1": 0.0003227582722277422,
+        "err_h1_semi": 1.8173334423832448e-05,
+        "err_l2": 0.0003222462291592516,
+        "err_linf": 0.0003250465272122275,
+        "err_linf_grad": 0.0003250465272122275,
+        "err_lp": 0.00032228395324648753,
+        "margin": 1e-05,
+        "time_steps": 1
+    },
+    "time": {
+        "dt": 0.025,
+        "tend": 2.5
+    },  
+    "output": {
+        "json": "sim.json",
+        "paraview": {
+            "file_name": "sim.pvd",
+            "options": {
+                "material": true,
+                "body_ids": true,
+                "tensor_values": false,
+                "discretization_order": false,
+                "nodes": false,
+                "contact_forces": true,
+                "friction_forces": true
+            },
+            "surface": true,
+            "vismesh_rel_area": 10000000
+        },
+        "directory": "output/kigumi-incline",
+        "advanced": {
+            "save_solve_sequence_debug": false,
+            "save_time_sequence": true
+        }
+    }
+}

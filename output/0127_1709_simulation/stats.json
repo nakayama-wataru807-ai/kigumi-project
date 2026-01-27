@@ -58,7 +58,7 @@
             "enabled": true,
             "extract": "volume",
             "is_obstacle": false,
-            "mesh": "plate_hole.obj",
+            "mesh": "../meshes/plate_hole.obj",
             "n_refs": 0,
             "surface_selection": {
                 "id_offset": 0,
@@ -120,7 +120,7 @@
                 "stiffness_mat": "",
                 "stress_mat": ""
             },
-            "directory": "",
+            "directory": "/home/watar/kigumi-project/scripts/../output/0127_1709_simulation",
             "json": "stats.json",
             "log": {
                 "file_level": "trace",
@@ -556,19 +556,19 @@
     "discr_order_min": 1,
     "discr_orderq_max": 1,
     "discr_orderq_min": 1,
-    "err_h1": 1.441185048819973,
-    "err_h1_semi": 1.3678317420681112,
-    "err_l2": 0.4539280453256264,
-    "err_linf": 1.2195153639938827,
-    "err_linf_grad": 2.1078530253928385,
-    "err_lp": 0.8016030867533794,
+    "err_h1": 1.4411850488199671,
+    "err_h1_semi": 1.3678317420681054,
+    "err_l2": 0.45392804532562553,
+    "err_linf": 1.2195153639938796,
+    "err_linf_grad": 2.107853025392752,
+    "err_lp": 0.8016030867533782,
     "formulation": "Laplacian",
     "geom_order": 1,
     "geom_order_min": 1,
     "is_simplicial": true,
     "iso_parametric": true,
     "mat_size": 73085401,
-    "max_angle": 6.95292535227704e-310,
+    "max_angle": 1e-323,
     "mesh_size": 0.018750034312562808,
     "min_edge_length": 0.004206997358882737,
     "num_bases": 8549,
@@ -584,7 +584,7 @@
     "num_pressure_bases": 0,
     "num_threads": 16,
     "num_vertices": 8549,
-    "peak_memory": 117,
+    "peak_memory": 115,
     "problem": "Franke",
     "sigma_avg": 0.0,
     "sigma_max": 0.0,
@@ -593,7 +593,7 @@
         0.0
     ],
     "sol_max": [
-        1.2199499696469234
+        1.2199499696469203
     ],
     "sol_min": [
         0.10755755225803061
@@ -609,10 +609,10 @@
     ],
     "spectrum_condest": null,
     "time_assembling_mass_mat": 0.0,
-    "time_assembling_stiffness_mat": 0.017186,
-    "time_assigning_rhs": 0.08316899999999999,
-    "time_building_basis": 0.037689,
+    "time_assembling_stiffness_mat": 0.012055,
+    "time_assigning_rhs": 0.077934,
+    "time_building_basis": 0.044891,
     "time_computing_poly_basis": 0.0,
-    "time_loading_mesh": 6.952925352262e-310,
-    "time_solving": 0.156831
+    "time_loading_mesh": 6.9530904614302e-310,
+    "time_solving": 0.153997
 }

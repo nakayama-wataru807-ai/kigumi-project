@@ -7,7 +7,7 @@
             "id": 2,
             "value": [0, 0, 0]
         }],
-        "rhs": [0, 9.81, 0]
+        "rhs": [0, 9.81, 0]  # Gravity vector
     },
     "contact": {
         "epsv": 1e-05,
@@ -23,11 +23,11 @@
             "scale": 1,
             "translation": [0, 0, 0]
         },
-        "volume_selection": 1,
+        "volume_selection": 2,
         "point_selection": [{
             "id": 2,
             "box":[
-                [0.9, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0]
             ],
             "relative": true
@@ -44,7 +44,7 @@
             "id": 1,
             "box":[
                 [0.0, 0.0, 0.0],
-                [0.1, 1.0, 1.0]
+                [1.0, 1.0, 1.0]
             ],
             "relative": true
         }]
@@ -100,7 +100,7 @@
         "directory": "../output",
         "json": "sim.json",
         "log": {
-            "level": "info"
+            "level": "debug"
         },
         "paraview": {
             "file_name": "sim.pvd",

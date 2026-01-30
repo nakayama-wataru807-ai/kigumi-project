@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 1. 引数でJSONファイルを指定（指定がなければデフォルトの *.json を使用）
-JSON_FILE="${1:-run.json}"
+JSON_FILE="${1:-kigumi-incline.json}"
 
 # 2. 現在の日時を取得 (月日_時分 例: 0127_1705)
 DATETIME=$(date +%m%d_%H%M)

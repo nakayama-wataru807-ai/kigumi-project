@@ -3,39 +3,51 @@
         "dirichlet_boundary": [{
             "id": 1,
             "value": [0, 0, 0]
+        },{
+            "id": 2,
+            "value": [0, 0, 0]
         }],
         "rhs": [0, 9.81, 0]
     },
-    "common": "common.json",
     "contact": {
         "epsv": 1e-05,
-        "friction_coefficient": 0.49
+        "friction_coefficient": 0.49,
+        "use_gcp_formulation": false,
+        "enabled": true,
+        "dhat": 0.001
     },
     "geometry": [{
-        "mesh": "../meshes/Koshikake-Kama_M.msh",
+        "mesh": "../meshes/Koshikake-Kama_1_M.msh",
         "transformation": {
-            "rotation": [0, 0, -26.565],
+            "rotation": [0, 0, 0],
             "scale": 1,
             "translation": [0, 0, 0]
         },
-        "volume_selection": 1
+        "volume_selection": 1,
+        "point_selection": [{
+            "id": 2,
+            "box":[
+                [0.9, 0.0, 0.0],
+                [1.0, 1.0, 1.0]
+            ],
+            "relative": true
+        }]
     }, {
         "mesh": "../meshes/Koshikake-Kama_F.msh",
         "transformation": {
-            "rotation": [0, 0, -26.565],
+            "rotation": [0, 0, 0],
             "scale": 1,
             "translation": [0, 0, 0]
         },
-        "volume_selection": 1
-    },{
-        "mesh": "../meshes/cube.msh",
-        "surface_selection": 1,
-        "transformation": {
-            "dimensions": [10, 0.01, 10],
-            "rotation": [0, 0, -26.565],
-            "translation": [2, -1.566, 0]
-        },
-        "volume_selection": 2
+        "volume_selection": 1,
+        "point_selection": [{
+            "id": 1,
+            "box":[
+                [0.0, 0.0, 0.0],
+                [0.1, 1.0, 1.0]
+            ],
+            "relative": true
+        }]
     }],
     "materials": [{
         "E": 1000000000.0,
@@ -61,25 +73,35 @@
         "contact": {
             "friction_convergence_tol": 0.01,
             "friction_iterations": -1
+        },
+        "linear": {
+            "solver": [
+                "Eigen::PardisoLDLT",
+                "Eigen::AccelerateLDLT",
+                "Eigen::CholmodSupernodalLLT",
+                "Eigen::SimplicialLDLT"
+            ]
+        },
+        "nonlinear": {
+            "iterations_per_strategy": 1,
+            "line_search": {
+                "method": "RobustArmijo"
+            },
+            "solver": "Newton",
+            "max_iterations": 50,
+            "x_delta": 1e-12,
+            "grad_norm": 1e-5
+        },
+        "advanced": {
+            "lump_mass_matrix": true
         }
     },
-    "tests": {
-        "err_h1": 0.0003227582722277422,
-        "err_h1_semi": 1.8173334423832448e-05,
-        "err_l2": 0.0003222462291592516,
-        "err_linf": 0.0003250465272122275,
-        "err_linf_grad": 0.0003250465272122275,
-        "err_lp": 0.00032228395324648753,
-        "margin": 1e-05,
-        "time_steps": 1
-    },
-    "time": {
-        "dt": 0.025,
-        "tend": 2.5
-    },  
     "output": {
         "directory": "../output",
         "json": "sim.json",
+        "log": {
+            "level": "info"
+        },
         "paraview": {
             "file_name": "sim.pvd",
             "options": {
@@ -92,11 +114,14 @@
                 "friction_forces": true
             },
             "surface": true,
-            "vismesh_rel_area": 10000000
+            "skip_frame": 0,
+            "vismesh_rel_area": 10000000,
+            "points": true
         },
         "advanced": {
             "save_solve_sequence_debug": false,
-            "save_time_sequence": true
+            "save_time_sequence": true,
+            "save_nl_solve_sequence": true
         }
     }
 }

@@ -18,6 +18,7 @@
                 "method": "RobustArmijo"
             },
             "solver": "Newton",
+            "max_iterations": 50,
             "x_delta": 1e-12,
             "grad_norm": 1e-5
         },
@@ -27,6 +28,9 @@
     },
     "output": {
         "json": "sim.json",
+        "log": {
+            "level": "info"
+        },
         "paraview": {
             "file_name": "sim.pvd",
             "options": {
@@ -36,11 +40,13 @@
                 "discretization_order": false,
                 "nodes": false
             },
-            "vismesh_rel_area": 10000000
+            "vismesh_rel_area": 10000000,
+            "points": true
         },
         "advanced": {
             "save_solve_sequence_debug": false,
-            "save_time_sequence": true
+            "save_time_sequence": true,
+            "save_nl_solve_sequence": true
         }
     }
 }

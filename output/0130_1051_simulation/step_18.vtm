@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VTKFile type="vtkMultiBlockDataSet" version="1.0">
+    <vtkMultiBlockDataSet>
+        <Block name="Volume">
+            <DataSet name="data" file="step_18.vtu"/>
+        </Block>
+        <Block name="Surface">
+            <DataSet name="data" file="step_18_surf.vtu"/>
+        </Block>
+        <Block name="Contact">
+            <DataSet name="data" file="step_18_surf_contact.vtu"/>
+        </Block>
+    </vtkMultiBlockDataSet>
+    <FieldData>
+        <DataArray type="Float32" Name="TimeValue">0.450000</DataArray>
+    </FieldData>
+</VTKFile>

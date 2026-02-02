@@ -3,13 +3,12 @@
         "dirichlet_boundary": [{
             "id": 1,
             "value": [0, 0, 0],
-            "dimension": [false, true, true]
-        },{
-            "id": 2,
-            "value": [0, 0, 0],
             "dimension": [true, true, true]
         }],
-        "rhs": [0, 0, -9.81]
+        "neumann_boundary": [{ 
+            "id": 2, "value": [100, 0, 0]
+        }],
+        "rhs": [0, 0, 0]
     },
     "contact": {
         "epsv": 1e-05,
@@ -25,13 +24,11 @@
             "scale": 1,
             "translation": [0, 0, 0]
         },
-        "volume_selection": 2,
+        "volume_selection": 1,
         "point_selection": [{
-            "id": 2,
-            "box":[
-                [0.99, 0.0, 0.0],
-                [1.0, 1.0, 1.0] # change relative to absolute coordinates if needed
-            ],
+            "id": 1,
+            "axis": "+X",
+            "position": 1.0,
             "relative": true
         }]
     }, {
@@ -41,27 +38,25 @@
             "scale": 1,
             "translation": [0, 0, 0]
         },
-        "volume_selection": 1,
+        "volume_selection": 2,
         "point_selection": [{
-            "id": 1,
-            "box":[
-                [0.0, 0.0, 0.0],
-                [0.01, 1.0, 1.0]
-            ],
+            "id": 2,
+            "axis": "-X",
+            "position": 0.0,
             "relative": true
         }]
     }],
     "materials": [{
-        "E": 1000000000.0,
+        "E": 7e9,
         "id": 1,
-        "nu": 0.4,
-        "rho": 1000,
+        "nu": 0.3,
+        "rho": 400,
         "type": "NeoHookean"
     }, {
-        "E": 200000000000.0,
+        "E": 7e9,
         "id": 2,
         "nu": 0.3,
-        "rho": 7750,
+        "rho": 400,
         "type": "NeoHookean"
     }],
     

@@ -1,0 +1,122 @@
+{
+    "boundary_conditions": {
+        "rhs": [0, 0, 0],
+        "dirichlet_boundary": [{
+            "id": 1, 
+            "value": ["t*0.001", 0, 0], 
+            "dimension": [true, false, false] 
+            },{
+            "id": 2, 
+            "value": [0, 0, 0]
+        }]
+    },
+    "time": {
+        "tend": 1.0,
+        "dt": 0.1
+    },
+    "contact": {
+        "epsv": 1e-05,
+        "friction_coefficient": 0.49,
+        "use_gcp_formulation": false,
+        "enabled": true,
+        "dhat": 0.001
+    },
+    "geometry": [{
+        "mesh": "../meshes/Koshikake-Kama_0.msh",
+        "transformation": {
+            "rotation": [0, 0, 0],
+            "scale": 1,
+            "translation": [0, 0, 0]
+        },
+        "volume_selection": 1,
+        "point_selection": [{
+            "id": 1,
+            "axis": "+X",
+            "position": 1.0,
+            "relative": true
+        }]
+    }, {
+        "mesh": "../meshes/Koshikake-Kama_F.msh",
+        "transformation": {
+            "rotation": [0, 0, 0],
+            "scale": 1,
+            "translation": [0, 0, 0]
+        },
+        "volume_selection": 2,
+        "point_selection": [{
+            "id": 2,
+            "axis": "-X",
+            "position": 0.0,
+            "relative": true
+        }]
+    }],
+    "materials": [{
+        "E": 7e9,
+        "id": 1,
+        "nu": 0.3,
+        "rho": 400,
+        "type": "NeoHookean"
+    }, {
+        "E": 7e9,
+        "id": 2,
+        "nu": 0.3,
+        "rho": 400,
+        "type": "NeoHookean"
+    }],
+    
+    "solver": {
+        "contact": {
+            "friction_convergence_tol": 0.01,
+            "friction_iterations": -1
+        },
+        "linear": {
+            "solver": [
+                "Eigen::PardisoLDLT",
+                "Eigen::AccelerateLDLT",
+                "Eigen::CholmodSupernodalLLT",
+                "Eigen::SimplicialLDLT"
+            ]
+        },
+        "nonlinear": {
+            "iterations_per_strategy": 1,
+            "line_search": {
+                "method": "RobustArmijo"
+            },
+            "solver": "Newton",
+            "max_iterations": 50,
+            "x_delta": 1e-12,
+            "grad_norm": 1e-5
+        },
+        "advanced": {
+            "lump_mass_matrix": true
+        }
+    },
+    "output": {
+        "directory": "../output",
+        "json": "sim.json",
+        "log": {
+            "level": "debug"
+        },
+        "paraview": {
+            "file_name": "sim.pvd",
+            "options": {
+                "material": true,
+                "body_ids": true,
+                "tensor_values": false,
+                "discretization_order": false,
+                "nodes": false,
+                "contact_forces": true,
+                "friction_forces": true
+            },
+            "surface": true,
+            "skip_frame": 0,
+            "vismesh_rel_area": 10000000,
+            "points": true
+        },
+        "advanced": {
+            "save_solve_sequence_debug": false,
+            "save_time_sequence": true,
+            "save_nl_solve_sequence": true
+        }
+    }
+}

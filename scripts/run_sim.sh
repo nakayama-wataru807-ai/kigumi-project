@@ -1,20 +1,35 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# 1. 引数でJSONファイルを指定（指定がなければデフォルトの *.json を使用）
-JSON_FILE="${1:-kigumi-tension.json}"
+# スクリプトの場所を基準に相対パスを解決する
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
-# 2. 現在の日時を取得 (月日_時分 例: 0127_1705)
-DATETIME=$(date +%m%d_%H%M)
+# 引数でJSONファイルを指定（指定がなければデフォルト）
+JSON_ARG="${1:-kigumi-tension.json}"
+if [[ "${JSON_ARG}" = /* ]]; then
+    JSON_FILE="${JSON_ARG}"
+else
+    JSON_FILE="${SCRIPT_DIR}/${JSON_ARG}"
+fi
 
-# 3. 出力フォルダ名を定義 (output/0127_1705_simulation)
-OUT_DIR="../output/${DATETIME}_simulation"
+if [[ ! -f "${JSON_FILE}" ]]; then
+    echo "Error: JSON file not found: ${JSON_FILE}" >&2
+    exit 1
+fi
 
-# 4. フォルダを作成
-mkdir -p "$OUT_DIR"
+POLYFEM_BIN="${HOME}/polyfem/build/PolyFEM_bin"
+if [[ ! -x "${POLYFEM_BIN}" ]]; then
+    echo "Error: PolyFEM binary not found or not executable: ${POLYFEM_BIN}" >&2
+    exit 1
+fi
 
-# 5. PolyFEMを実行
-# 実行するJSONファイル名を表示
-echo "Running simulation with: $JSON_FILE"
-~/polyfem/build/PolyFEM_bin --json "$JSON_FILE" --output_dir "$OUT_DIR"
+# 現在の日時を取得 (月日_時分 例: 0127_1705)
+DATETIME="$(date +%m%d_%H%M)"
+OUT_DIR="${PROJECT_ROOT}/output/${DATETIME}_simulation"
+mkdir -p "${OUT_DIR}"
 
-echo "Simulation finished. Results are in $OUT_DIR"
+echo "Running simulation with: ${JSON_FILE}"
+"${POLYFEM_BIN}" --json "${JSON_FILE}" --output_dir "${OUT_DIR}"
+
+echo "Simulation finished. Results are in ${OUT_DIR}"

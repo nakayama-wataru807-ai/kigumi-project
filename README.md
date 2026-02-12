@@ -71,3 +71,10 @@ Click the Rescale to Data Range icon (a small rainbow icon with a magnifying gla
 Go to ```Filters``` > ```Alphabetical``` > Warp By Vector.
 
 Set the "Vectors" to ```solution``` and click Apply to see the physical deformation.
+
+---
+両方の変化を確認するには（ParaView）:
+
+1. body_ids で色分け（既に出力ON: kigumi-tension.json (lines 100-102)）
+2. Warp By Vector で solution を使って変形表示
+3. Threshold を2回使って body_ids=1 と body_ids=2 を分けて表示すると、各部材の変形を個別に比較できます

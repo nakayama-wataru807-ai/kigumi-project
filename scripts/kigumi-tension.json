@@ -1,18 +1,16 @@
 {
     "boundary_conditions": {
         "rhs": [0, 0, 0],
-        "dirichlet_boundary": [{
+        "neumann_boundary": [{ 
             "id": 1, 
-            "value": ["t*0.001", 0, 0], 
-            "dimension": [true, false, false] 
-            },{
+            "value": [2000, 0, 0]
+        }],
+        "dirichlet_boundary": [{
             "id": 2, 
-            "value": [0, 0, 0]
-        }]
-    },
-    "time": {
-        "tend": 1.0,
-        "dt": 0.1
+            "value": [0, 0, 0], 
+            "dimension": [true, true, true] 
+            }
+        ]
     },
     "contact": {
         "epsv": 1e-05,

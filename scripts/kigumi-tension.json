@@ -3,9 +3,13 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [2000, 0, 0]
+            "value": [1, 0, 0]
         }],
         "dirichlet_boundary": [{
+            "id": 1,
+            "value": [0, 0, 0],
+            "dimension": [false, true, true]
+            },{
             "id": 2, 
             "value": [0, 0, 0], 
             "dimension": [true, true, true] 
@@ -27,7 +31,7 @@
             "translation": [0, 0, 0]
         },
         "volume_selection": 1,
-        "point_selection": [{
+        "surface_selection": [{
             "id": 1,
             "axis": "+X",
             "position": 1.0,
@@ -41,7 +45,7 @@
             "translation": [0, 0, 0]
         },
         "volume_selection": 2,
-        "point_selection": [{
+        "surface_selection": [{
             "id": 2,
             "axis": "-X",
             "position": 0.0,
@@ -65,7 +69,7 @@
     "solver": {
         "contact": {
             "friction_convergence_tol": 0.01,
-            "friction_iterations": -1
+            "friction_iterations": 20
         },
         "linear": {
             "solver": [
@@ -81,7 +85,7 @@
                 "method": "RobustArmijo"
             },
             "solver": "Newton",
-            "max_iterations": 50,
+            "max_iterations": 300,
             "x_delta": 1e-12,
             "grad_norm": 1e-5
         },

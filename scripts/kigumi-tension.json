@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [100, 0, 0]
+            "value": [10, 0, 0]
         }],
         "dirichlet_boundary": [{
             "id": 1,

@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [1, 0, 0]
+            "value": [100, 0, 0]
         }],
         "dirichlet_boundary": [{
             "id": 1,
@@ -53,15 +53,15 @@
         }]
     }],
     "materials": [{
-        "E": 7e9,
+        "E": 8e9,
         "id": 1,
-        "nu": 0.3,
+        "nu": 0.35,
         "rho": 400,
         "type": "NeoHookean"
     }, {
-        "E": 7e9,
+        "E": 8e9,
         "id": 2,
-        "nu": 0.3,
+        "nu": 0.35,
         "rho": 400,
         "type": "NeoHookean"
     }],
@@ -85,7 +85,7 @@
                 "method": "RobustArmijo"
             },
             "solver": "Newton",
-            "max_iterations": 300,
+            "max_iterations": 1000,
             "x_delta": 1e-12,
             "grad_norm": 1e-5
         },

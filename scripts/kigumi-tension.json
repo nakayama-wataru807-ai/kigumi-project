@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [10, 0, 0]
+            "value": [0.001, 0, 0]
         }],
         "dirichlet_boundary": [{
             "id": 1,
@@ -18,7 +18,7 @@
     },
     "contact": {
         "epsv": 1e-05,
-        "friction_coefficient": 0.49,
+        "friction_coefficient": 0,
         "use_gcp_formulation": false,
         "enabled": true,
         "dhat": 0.001
@@ -56,20 +56,25 @@
         "E": 8e9,
         "id": 1,
         "nu": 0.35,
-        "rho": 400,
+        "rho": 4e-7,
         "type": "NeoHookean"
     }, {
         "E": 8e9,
         "id": 2,
         "nu": 0.35,
-        "rho": 400,
+        "rho": 4e-7,
         "type": "NeoHookean"
     }],
-    
+    "units":
+    {
+        "length": "mm",
+        "mass": "kg",
+        "time": "ms"
+    },
     "solver": {
         "contact": {
             "friction_convergence_tol": 0.01,
-            "friction_iterations": 20
+            "friction_iterations": 1
         },
         "linear": {
             "solver": [

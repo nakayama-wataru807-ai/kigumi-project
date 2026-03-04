@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [0.001, 0, 0]
+            "value": [0.01, 0, 0]
         }],
         "dirichlet_boundary": [{
             "id": 1,
@@ -57,13 +57,13 @@
         "id": 1,
         "nu": 0.35,
         "rho": 4e-7,
-        "type": "NeoHookean"
+        "type": "LinearElasticity"
     }, {
         "E": 8e9,
         "id": 2,
         "nu": 0.35,
         "rho": 4e-7,
-        "type": "NeoHookean"
+        "type": "LinearElasticity"
     }],
     "units":
     {

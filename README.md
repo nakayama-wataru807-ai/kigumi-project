@@ -28,7 +28,7 @@ To run the simulation, navigate to your script directory and execute the PolyFEM
 
 ```bash
     #Navigate to the project directory
-    cd ~/kigumi-project/scripts
+    cd scripts
     #Run PolyFEM 
     ~/polyfem/build/PolyFEM_bin --json  *.json
 ```
@@ -81,3 +81,20 @@ Set the "Vectors" to ```solution``` and click Apply to see the physical deformat
 
 
 ## Units
+
+
+## PolyFEM Installation Notes
+
+Most importantly, you need to install [https://github.com/polyfem/polyfem](PolyFEM) on your machine. Some dependencies are needed such as SuiteSparse or Eigen, which you can install through Homebrew or MacPort.
+
+### Mac-specific installation
+
+It is important to notice that you need to disable SPQR when building PolyFEM. This is done by executing in your local PolyFEM repository as
+
+```bash
+    mkdir build && cd build
+    cmake -DPOLYSOLVE_WITH_SPQR=OFF ..
+    build -j4
+```
+
+Ninja doesn't work for Mac on the current latest commit (tested 10/03/2026 with a M1 Max chip).

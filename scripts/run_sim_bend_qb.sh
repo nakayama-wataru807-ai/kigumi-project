@@ -26,7 +26,7 @@ fi
 
 # 現在の日時を取得 (月日_時分 例: 0127_1705)
 DATETIME="$(date +%m%d_%H%M)"
-OUT_DIR="${PROJECT_ROOT}/output/${DATETIME}_simulation"
+OUT_DIR="/Users/quentinbecker/Library/CloudStorage/GoogleDrive-quentinbecker@g.ecc.u-tokyo.ac.jp/My Drive/kigumi-project/simulations/bending/${DATETIME}_simulation"
 mkdir -p "${OUT_DIR}"
 
 echo "Running simulation with: ${JSON_FILE}"

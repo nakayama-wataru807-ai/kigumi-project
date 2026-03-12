@@ -101,13 +101,12 @@
         }
     },
     "output": {
-        "directory": "../output",
-        "json": "sim.json",
+        "json": "sim_tension.json",
         "log": {
             "level": "debug"
         },
         "paraview": {
-            "file_name": "sim.pvd",
+            "file_name": "sim_tension.pvd",
             "options": {
                 "material": true,
                 "body_ids": true,

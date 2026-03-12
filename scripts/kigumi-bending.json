@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [0.0, 0.04, 0]
+            "value": [0.0, 0.01, 0]
         }],
         "dirichlet_boundary": [{
             "id": 2, 
@@ -17,7 +17,7 @@
         "friction_coefficient": 0,
         "use_convergent_formulation": false,
         "use_gcp_formulation": false,
-        "use_adaptive_dhat": true,
+        "use_adaptive_dhat": false,
         "enabled": true,
         "dhat": 1.0
     },
@@ -102,13 +102,12 @@
         }
     },
     "output": {
-        "directory": "../output",
-        "json": "sim.json",
+        "json": "sim_bending.json",
         "log": {
             "level": "debug"
         },
         "paraview": {
-            "file_name": "sim.pvd",
+            "file_name": "sim_bending.pvd",
             "options": {
                 "material": true,
                 "body_ids": true,

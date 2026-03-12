@@ -27,7 +27,7 @@ fi
 # 現在の日時を取得 (月日_時分 例: 0127_1705)
 DATETIME="$(date +%m%d_%H%M)"
 OUT_DIR="/Users/quentinbecker/Library/CloudStorage/GoogleDrive-quentinbecker@g.ecc.u-tokyo.ac.jp/My Drive/kigumi-project/simulations/tension/${DATETIME}_simulation"
-sudo mkdir -p "${OUT_DIR}"
+mkdir -p "${OUT_DIR}"
 
 echo "Running simulation with: ${JSON_FILE}"
 "${POLYFEM_BIN}" --json "${JSON_FILE}" --output_dir "${OUT_DIR}"

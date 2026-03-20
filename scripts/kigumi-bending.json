@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [0.0, 0.01, 0]
+            "value": [0.0, 0.5, 0]
         }],
         "dirichlet_boundary": [{
             "id": 2, 
@@ -19,13 +19,13 @@
         "use_gcp_formulation": false,
         "use_adaptive_dhat": false,
         "enabled": true,
-        "dhat": 1.0
+        "dhat": 1.0e-1
     },
     "geometry": [{
         "mesh": "../meshes/Koshikake-Kama_0.msh",
         "transformation": {
             "rotation": [0, 0, 0],
-            "scale": 1,
+            "scale": 0.99,
             "translation": [0, 0, 0]
         },
         "volume_selection": 1,
@@ -39,7 +39,7 @@
         "mesh": "../meshes/Koshikake-Kama_F.msh",
         "transformation": {
             "rotation": [0, 0, 0],
-            "scale": 1,
+            "scale": 0.99,
             "translation": [0, 0, 0]
         },
         "volume_selection": 2,
@@ -55,13 +55,13 @@
         "id": 1,
         "nu": 0.35,
         "rho": 4e-7,
-        "type": "LinearElasticity"
+        "type": "NeoHookean"
     }, {
         "E": 8e0,
         "id": 2,
         "nu": 0.35,
         "rho": 4e-7,
-        "type": "LinearElasticity"
+        "type": "NeoHookean"
     }],
     "units":
     {
@@ -71,6 +71,11 @@
     },
     "solver": {
         "contact": {
+            "CCD": {
+                "broad_phase": "hash_grid",
+                "max_iterations": 1000,
+                "tolerance": 1.0e-5
+            },
             "friction_convergence_tol": 0.01,
             "friction_iterations": 1
         },

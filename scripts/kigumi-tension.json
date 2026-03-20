@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "normal_aligned_neumann_boundary": [{ 
             "id": 1, 
-            "value": 0.1
+            "value": 1.0
         }],
         "dirichlet_boundary": [{
             "id": 2, 
@@ -18,13 +18,13 @@
         "use_convergent_formulation": false,
         "use_gcp_formulation": false,
         "enabled": true,
-        "dhat": 1.0
+        "dhat": 1.0e-1
     },
     "geometry": [{
         "mesh": "../meshes/Koshikake-Kama_0.msh",
         "transformation": {
             "rotation": [0, 0, 0],
-            "scale": 1,
+            "scale": 0.99,
             "translation": [0, 0, 0]
         },
         "volume_selection": 1,
@@ -38,7 +38,7 @@
         "mesh": "../meshes/Koshikake-Kama_F.msh",
         "transformation": {
             "rotation": [0, 0, 0],
-            "scale": 1,
+            "scale": 0.99,
             "translation": [0, 0, 0]
         },
         "volume_selection": 2,

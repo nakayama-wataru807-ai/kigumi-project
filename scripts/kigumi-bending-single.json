@@ -2,21 +2,13 @@
     "boundary_conditions": {
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
-            "id": 1, 
-            "value": [0.0, "0.02 * t", 0]
+            "id": 2, 
+            "value": [0.0, "0.2 * t", 0]
         }],
         "dirichlet_boundary": [{
-            "id": 2, 
+            "id": 1, 
             "value": [0, 0, 0], 
-            "dimension": [true, true, true]
-            }, {
-            "id": 3,
-            "value": [0, 0, 0],
-            "dimension": [false, false, true]
-            }, {
-            "id": 4,
-            "value": [0, 0, 0],
-            "dimension": [false, false, true]
+            "dimension": [true, true, true] 
             }
         ]
     },
@@ -26,8 +18,8 @@
         "use_convergent_formulation": false,
         "use_gcp_formulation": false,
         "use_adaptive_dhat": false,
-        "enabled": true,
-        "dhat": 1.0
+        "enabled": false,
+        "dhat": 1.0e-1
     },
     "geometry": [{
         "mesh": "../meshes/Koshikake-Kama_005edge_M.msh",
@@ -43,53 +35,18 @@
             "position": 1.0,
             "relative": true
         }, {
-            "id": 3,
-            "axis": "+Z",
-            "position": 1.0,
-            "relative": true
-        }, {
-            "id": 4,
-            "axis": "-Z",
-            "position": 0.0,
-            "relative": true
-        }]
-    }, {
-        "mesh": "../meshes/Koshikake-Kama_005edge_F.msh",
-        "transformation": {
-            "rotation": [0, 0, 0],
-            "scale": 1.0,
-            "translation": [0, 0, 0]
-        },
-        "volume_selection": 2,
-        "surface_selection": [{
             "id": 2,
             "axis": "-X",
-            "position": 0.0,
-            "relative": true
-        }, {
-            "id": 3,
-            "axis": "+Z",
-            "position": 1.0,
-            "relative": true
-        }, {
-            "id": 4,
-            "axis": "-Z",
             "position": 0.0,
             "relative": true
         }]
     }],
     "materials": [{
+        "E": 8e0,
         "id": 1,
+        "nu": 0.35,
         "rho": 4e-7,
-        "type": "NeoHookean",
-        "E": 8,
-        "nu": 0.35
-    }, {
-        "id": 2,
-        "rho": 4e-7,
-        "type": "NeoHookean",
-        "E": 8,
-        "nu": 0.35
+        "type": "NeoHookean"
     }],
     "time": {
         "tend": 1,

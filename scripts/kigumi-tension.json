@@ -1,14 +1,22 @@
 {
     "boundary_conditions": {
         "rhs": [0, 0, 0],
-        "normal_aligned_neumann_boundary": [{ 
+        "neumann_boundary": [{ 
             "id": 1, 
-            "value": 1.0
+            "value": ["0.02 * t", 0, 0]
         }],
         "dirichlet_boundary": [{
             "id": 2, 
             "value": [0, 0, 0], 
-            "dimension": [true, true, true] 
+            "dimension": [true, true, true]
+            }, {
+            "id": 3,
+            "value": [0, 0, 0],
+            "dimension": [false, false, true]
+            }, {
+            "id": 4,
+            "value": [0, 0, 0],
+            "dimension": [false, false, true]
             }
         ]
     },
@@ -18,13 +26,13 @@
         "use_convergent_formulation": false,
         "use_gcp_formulation": false,
         "enabled": true,
-        "dhat": 1.0e-1
+        "dhat": 1.0e0
     },
     "geometry": [{
-        "mesh": "../meshes/Koshikake-Kama_0.msh",
+        "mesh": "../meshes/Koshikake-Kama_005edge_M.msh",
         "transformation": {
             "rotation": [0, 0, 0],
-            "scale": 0.99,
+            "scale": 1.0,
             "translation": [0, 0, 0]
         },
         "volume_selection": 1,
@@ -33,18 +41,38 @@
             "axis": "+X",
             "position": 1.0,
             "relative": true
+        }, {
+            "id": 3,
+            "axis": "+Z",
+            "position": 1.0,
+            "relative": true
+        }, {
+            "id": 4,
+            "axis": "-Z",
+            "position": 0.0,
+            "relative": true
         }]
     }, {
-        "mesh": "../meshes/Koshikake-Kama_F.msh",
+        "mesh": "../meshes/Koshikake-Kama_005edge_F.msh",
         "transformation": {
             "rotation": [0, 0, 0],
-            "scale": 0.99,
+            "scale": 1.0,
             "translation": [0, 0, 0]
         },
         "volume_selection": 2,
         "surface_selection": [{
             "id": 2,
             "axis": "-X",
+            "position": 0.0,
+            "relative": true
+        }, {
+            "id": 3,
+            "axis": "+Z",
+            "position": 1.0,
+            "relative": true
+        }, {
+            "id": 4,
+            "axis": "-Z",
             "position": 0.0,
             "relative": true
         }]
@@ -62,6 +90,12 @@
         "rho": 4e-7,
         "type": "LinearElasticity"
     }],
+    "time": {
+        "tend": 1,
+        "dt": 0.1,
+        "integrator": "ImplicitEuler",
+        "quasistatic": true
+    },
     "units":
     {
         "length": "mm",
@@ -97,7 +131,7 @@
     },
     "space":{
         "remesh": {
-            "enabled": true
+            "enabled": false
         }
     },
     "output": {
@@ -117,9 +151,9 @@
                 "friction_forces": true
             },
             "surface": true,
-            "skip_frame": 0,
-            "vismesh_rel_area": 10000000,
-            "points": true
+            "points": true,
+            "skip_frame": 1,
+            "vismesh_rel_area": 10000000
         },
         "advanced": {
             "save_solve_sequence_debug": false,

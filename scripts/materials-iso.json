@@ -1,0 +1,13 @@
+[{
+    "id": 1,
+    "rho": 4e-7,
+    "type": "SaintVenant",
+    "E": 8,
+    "nu": 0.35
+}, {
+    "id": 2,
+    "rho": 4e-7,
+    "type": "SaintVenant",
+    "E": 8,
+    "nu": 0.35
+}]

@@ -18,15 +18,16 @@ if [[ ! -f "${JSON_FILE}" ]]; then
     exit 1
 fi
 
-# Material model: --iso or --ortho (default: --iso)
-# NOTE: --ortho (HookeLinearElasticity) does not converge with IPC contact due to
-#       near-singular stiffness (M piece has rigid body modes). Use --iso (NeoHookean)
-#       for two-piece bending+contact simulations.
+# Material model: --iso | --fibered | --layered (default: --iso)
+# --iso     : HookeLinearElasticity, isotropic E/nu
+# --fibered : SaintVenant, transversely isotropic, stiff along X (grain along beam axis)
+# --layered : SaintVenant, orthotropic, stiff in XY (layers in XY plane, weak through-thickness Z)
 MATERIAL="iso"
 for arg in "${@:2}"; do
     case "${arg}" in
-        --iso)   MATERIAL="iso" ;;
-        --ortho) MATERIAL="ortho" ;;
+        --iso)      MATERIAL="iso" ;;
+        --fibered)  MATERIAL="fibered" ;;
+        --layered)  MATERIAL="layered" ;;
     esac
 done
 

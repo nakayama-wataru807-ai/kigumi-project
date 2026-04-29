@@ -1,0 +1,11 @@
+[{
+    "id": 1,
+    "rho": 4e-7,
+    "type": "SaintVenant",
+    "elasticity_tensor": [8.0, 8.0, 4.0, 0.35, 0.35, 0.35, 2.963, 2.963, 2.963]
+}, {
+    "id": 2,
+    "rho": 4e-7,
+    "type": "SaintVenant",
+    "elasticity_tensor": [8.0, 8.0, 4.0, 0.35, 0.35, 0.35, 2.963, 2.963, 2.963]
+}]

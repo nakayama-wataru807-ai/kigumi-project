@@ -3,7 +3,7 @@
         "rhs": [0, 0, 0],
         "neumann_boundary": [{ 
             "id": 1, 
-            "value": [0.0, "0.02 * t", 0]
+            "value": [0.0, "0.0002 * t", 0]
         }],
         "dirichlet_boundary": [{
             "id": 2, 
@@ -160,7 +160,7 @@
             "options": {
                 "material": true,
                 "body_ids": true,
-                "tensor_values": false,
+                "tensor_values": true,
                 "discretization_order": true,
                 "nodes": true,
                 "contact_forces": true,

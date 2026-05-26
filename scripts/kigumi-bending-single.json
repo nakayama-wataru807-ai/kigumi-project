@@ -117,7 +117,7 @@
             "options": {
                 "material": true,
                 "body_ids": true,
-                "tensor_values": false,
+                "tensor_values": true,
                 "discretization_order": true,
                 "nodes": true,
                 "contact_forces": true,

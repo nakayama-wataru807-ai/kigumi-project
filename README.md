@@ -54,7 +54,33 @@ To run a specific JSON configuration file (e.g., ```tension_test.json```), pass 
 ```
 ---
 
-### 2. Visualize Results in ParaView
+### 2. Render Results in Blender
+The script `scripts/render_simulation.py` loads deformed surface geometries from PolyFEM `.vtu` output files into Blender and creates a scene with one mesh object per body per step.
+
+Before running, edit the `CONFIG` section at the top of the script:
+
+```python
+SIM_DIR = "/path/to/simulation_output"   # folder containing step_N_surf.vtu files
+STEPS   = [0, 5, 10]                     # which time steps to import
+```
+
+Blender bundles its own Python interpreter, but it needs `numpy` to parse the binary VTU files. The easiest way is to run Blender from within the `kigumi_env` conda environment, which makes the environment's `numpy` visible to Blender's Python:
+
+```bash
+conda activate kigumi_env
+blender --background --python scripts/render_simulation.py
+```
+
+To open the result interactively (with the Blender GUI), omit `--background`:
+
+```bash
+conda activate kigumi_env
+blender --python scripts/render_simulation.py
+```
+
+---
+
+### 3. Visualize Results in ParaView
 Once the simulation completes, a ```result.vtu``` file will be generated in the ```output``` folder. Follow these steps to visualize it:
 
 1. Open File: Launch ParaView and go to ```File``` > ```Open``` to select ```result.vtu```.

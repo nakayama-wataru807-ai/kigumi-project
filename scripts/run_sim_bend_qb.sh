@@ -1,4 +1,36 @@
 #!/usr/bin/env bash
+# run_sim_bend_qb.sh — launch a PolyFEM bending simulation with a chosen material model.
+#
+# USAGE
+#   ./scripts/run_sim_bend_qb.sh [JSON] [--iso | --fibered | --layered]
+#
+#   JSON          Path to the simulation JSON (default: kigumi-bending.json).
+#                 Relative paths are resolved from the scripts/ directory.
+#
+# MATERIAL FLAGS  (default: --iso)
+#   --iso         Linear-elastic isotropic  (HookeLinearElasticity, E/nu only).
+#                 Fast; good for sanity-checks.
+#   --fibered     Saint-Venant transversely isotropic.
+#                 Stiff along X (grain direction); weaker in the YZ plane.
+#                 Captures the dominant along-grain / across-grain contrast.
+#   --layered     Saint-Venant orthotropic with three distinct principal stiffnesses.
+#                 XY-plane layers are stiff; Z (through-thickness) is weak.
+#                 Best match for laminated / ring-porous wood; use for Tsai-Wu analysis.
+#
+# EXAMPLES
+#   ./scripts/run_sim_bend_qb.sh                          # iso, default JSON
+#   ./scripts/run_sim_bend_qb.sh kigumi-bending.json --layered
+#   ./scripts/run_sim_bend_qb.sh kigumi-bending.json --fibered
+#
+# OUTPUT
+#   Results are written to a timestamped folder inside:
+#     ~/Library/CloudStorage/.../kigumi-project/simulations/bending/
+#   Folder name format: MMDD_HHMM_<material>_simulation
+#
+# DEPENDENCIES
+#   - PolyFEM binary at ~/Research/polyfem/build/PolyFEM_bin
+#   - jq  (used to patch the materials block before passing JSON to PolyFEM)
+#   - Material snippets: scripts/materials-{iso,fibered,layered}.json
 set -euo pipefail
 
 # スクリプトの場所を基準に相対パスを解決する

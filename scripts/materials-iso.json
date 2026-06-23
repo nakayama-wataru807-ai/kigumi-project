@@ -10,4 +10,10 @@
     "type": "SaintVenant",
     "E": 8,
     "nu": 0.35
+}, {
+    "id": 3,
+    "rho": 4e-7,
+    "type": "SaintVenant",
+    "E": 8,
+    "nu": 0.35
 }]

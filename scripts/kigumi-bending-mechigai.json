@@ -1,13 +1,13 @@
 {
     "boundary_conditions": {
         "rhs": [0, 0, 0],
-        "neumann_boundary": [{ 
-            "id": 1, 
-            "value": [0.0, "0.0002 * t", 0]
+        "neumann_boundary": [{
+            "id": 1,
+            "value": [0.0, "0.002 * t", 0]
         }],
         "dirichlet_boundary": [{
-            "id": 2, 
-            "value": [0, 0, 0], 
+            "id": 2,
+            "value": [0, 0, 0],
             "dimension": [true, true, true]
             }, {
             "id": 3,
@@ -22,15 +22,15 @@
     },
     "contact": {
         "epsv": 1e-3,
-        "friction_coefficient": 0,
+        "friction_coefficient": 0.3,
         "use_convergent_formulation": false,
         "use_gcp_formulation": false,
         "use_adaptive_dhat": false,
         "enabled": true,
-        "dhat": 0.6
+        "dhat": 0.95
     },
     "geometry": [{
-        "mesh": "../meshes/Koshikake-Kama_005edge_M.msh",
+        "mesh": "/Users/quentinbecker/Research/kigumi-project/meshes/Koshikake-mechigai-Kama_male_1mm.msh",
         "transformation": {
             "rotation": [0, 0, 0],
             "scale": 1.0,
@@ -40,8 +40,8 @@
         "surface_selection": [{
             "id": 1,
             "axis": "+X",
-            "position": 1.0,
-            "relative": true
+            "position": 175.0,
+            "relative": false
         }, {
             "id": 3,
             "axis": "+Z",
@@ -54,7 +54,7 @@
             "relative": true
         }]
     }, {
-        "mesh": "../meshes/Koshikake-Kama_005edge_F.msh",
+        "mesh": "/Users/quentinbecker/Research/kigumi-project/meshes/Koshikake-Mechigai-Kama_Female.msh",
         "transformation": {
             "rotation": [0, 0, 0],
             "scale": 1.0,
@@ -93,7 +93,7 @@
     }],
     "time": {
         "tend": 1,
-        "dt": 0.1,
+        "dt": 0.05,
         "integrator": "ImplicitEuler",
         "quasistatic": true
     },
@@ -124,10 +124,10 @@
         },
         "nonlinear": {
             "Newton": {
-                "force_psd_projection": false,
+                "force_psd_projection": true,
                 "reg_weight_inc": 10,
                 "reg_weight_max": 100000000.0,
-                "reg_weight_min": 1e-08,
+                "reg_weight_min": 1e-03,
                 "residual_tolerance": 1e-05,
                 "use_psd_projection": true,
                 "use_psd_projection_in_regularized": true
@@ -137,9 +137,9 @@
                 "method": "RobustArmijo"
             },
             "solver": "Newton",
-            "max_iterations": 10000,
+            "max_iterations": 1000,
             "x_delta": 1e-12,
-            "grad_norm": 1e-5
+            "grad_norm": 6e-2
         },
         "advanced": {
             "lump_mass_matrix": true

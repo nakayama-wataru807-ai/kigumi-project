@@ -1,13 +1,13 @@
 {
     "boundary_conditions": {
         "rhs": [0, 0, 0],
-        "neumann_boundary": [{ 
-            "id": 1, 
+        "neumann_boundary": [{
+            "id": 1,
             "value": [0.0, "0.0002 * t", 0]
         }],
         "dirichlet_boundary": [{
-            "id": 2, 
-            "value": [0, 0, 0], 
+            "id": 2,
+            "value": [0, 0, 0],
             "dimension": [true, true, true]
             }, {
             "id": 3,
@@ -27,10 +27,10 @@
         "use_gcp_formulation": false,
         "use_adaptive_dhat": false,
         "enabled": true,
-        "dhat": 0.6
+        "dhat": 0.5
     },
     "geometry": [{
-        "mesh": "../meshes/Koshikake-Kama_005edge_M.msh",
+        "mesh": "/Users/quentinbecker/Research/kigumi-project/meshes/Ari_male_1mm.msh",
         "transformation": {
             "rotation": [0, 0, 0],
             "scale": 1.0,
@@ -40,8 +40,8 @@
         "surface_selection": [{
             "id": 1,
             "axis": "+X",
-            "position": 1.0,
-            "relative": true
+            "position": 175.0,
+            "relative": false
         }, {
             "id": 3,
             "axis": "+Z",
@@ -54,7 +54,7 @@
             "relative": true
         }]
     }, {
-        "mesh": "../meshes/Koshikake-Kama_005edge_F.msh",
+        "mesh": "/Users/quentinbecker/Research/kigumi-project/meshes/Ari_Female.msh",
         "transformation": {
             "rotation": [0, 0, 0],
             "scale": 1.0,

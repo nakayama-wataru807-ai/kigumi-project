@@ -39,6 +39,11 @@ CLI OPTIONS
         When TSAI_WU_PLOT_EVOLUTION is True (default):
           - a matplotlib summary plot is saved to OUTPUT_DIR/tsai_wu_evolution.png
 
+Force evolution plot
+        When PLOT_FORCE_EVOLUTION is True (default), render_simulation.py also
+        saves force_evolution.png by integrating traction_force over the selected
+        sideset across the available simulation steps.
+
     <any PointData field>
         Any scalar (or vector → magnitude) field present in the VTU, e.g.
         "rho", "discr", "C_00".  Falls back to the volume VTU if absent from
@@ -53,14 +58,23 @@ All paths, step list, strength parameters, render settings, and feature flags
 are in the CONFIG section at the top of this file.  Key variables:
 
     SIM_DIR               – folder containing step_N_surf.vtu / step_N.vtu
-    STEPS                 – list of time steps to render, e.g. [0, 5, 10]
+    RENDER_NUM            – how many steps to render (int):
+                              -1 → all available steps
+                               0 → no renders (plots/evolution still run)
+                               1 → last step only
+                               N → N evenly-spaced steps (incl. first and last)
+                            Default: 3  (e.g. steps 0, 5, 10 from 11 available)
     COLORIZE_FIELD        – default field (None → solid wood colors)
     COLORIZE_CLIM         – fixed [vmin, vmax], or None to auto-scale globally
     TSAI_WU_STRENGTHS     – wood strength parameters (GPa)
     TSAI_WU_FIBER_DIR     – longitudinal (grain) axis in global coordinates
     TSAI_WU_HIGHLIGHT_FAILURE – paint failed faces red (bool)
     TSAI_WU_PLOT_EVOLUTION    – save tsai_wu_evolution.png (bool)
+    PLOT_FORCE_EVOLUTION      – save force_evolution.png (bool)
+    FORCE_PLOT_SIDESET        – sideset id used for the force plot
+    FORCE_PLOT_UNIT_LABEL     – y-axis label for the force plot
     OUTPUT_DIR            – directory for rendered PNGs and .blend file
+                            (default: <SIM_DIR>/output)
     RENDER_IMAGES         – if False, skip rendering and save .blend only
     RENDER_ENGINE         – "CYCLES" or "BLENDER_EEVEE_NEXT"
     RENDER_SAMPLES        – samples per pixel (higher = cleaner, slower)
@@ -79,17 +93,15 @@ EXAMPLES
     # Von Mises stress
     blender --background --python scripts/render_simulation.py -- --field von_mises
 
-    # Tsai-Wu evolution plot only (no renders)
+    # Plot-only mode with Tsai-Wu + force evolution (no renders)
     #   1) set COLORIZE_FIELD = "tsai_wu"
     #   2) set TSAI_WU_PLOT_EVOLUTION = True
-    #   3) set RENDER_IMAGES = False
+    #   3) set PLOT_FORCE_EVOLUTION = True
+    #   4) set RENDER_IMAGES = False
     blender --background --python scripts/render_simulation.py
 """
 
 import bpy
-import base64
-import struct
-import xml.etree.ElementTree as ET
 import numpy as np
 import os
 import sys
@@ -102,10 +114,64 @@ if _conda_prefix:
         if _sp not in sys.path:
             sys.path.insert(0, _sp)
 
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+
+from vis_utils import decode_array as _decode_array
+from vis_utils import find_available_steps
+from vis_utils import load_surface_mesh_data
+from vis_utils import load_volume_element_scalar
+from vis_utils import plot_failure_evolution
+from vis_utils import plot_force_evolution as save_force_evolution_plot
+from physics_utils import load_volume_tsai_wu
+from physics_utils import point_von_mises_from_piece
+from plot_stress_cloud import generate_stress_clouds
+
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 
-SIM_DIR = "/Users/quentinbecker/Library/CloudStorage/GoogleDrive-quentinbecker@g.ecc.u-tokyo.ac.jp/My Drive/kigumi-project/simulations/bending/0525_2343_layered_simulation/"   # folder with step_N_surf.vtu files
-STEPS   = [0, 5, 10]                     # which time steps to import
+# Set to a specific simulation folder, or None to auto-select the most-recently
+# modified sub-folder inside BENDING_DIR.
+BENDING_DIR = "/Users/quentinbecker/Library/CloudStorage/GoogleDrive-quentinbecker@g.ecc.u-tokyo.ac.jp/My Drive/kigumi-project/simulations/bending"
+_SIM_DIR_EXPLICIT = None   # e.g. os.path.join(BENDING_DIR, "0526_2143_layered_simulation")
+
+def _latest_sim_dir(bending_dir):
+    """Return the sub-folder of *bending_dir* with the most recent mtime."""
+    try:
+        entries = [
+            e for e in os.scandir(bending_dir)
+            if e.is_dir() and not e.name.startswith('.')
+        ]
+        if not entries:
+            raise FileNotFoundError(f'No sub-folders found in {bending_dir}')
+        return max(entries, key=lambda e: e.stat().st_mtime).path
+    except (FileNotFoundError, PermissionError) as exc:
+        raise RuntimeError(f'Cannot auto-detect latest sim dir: {exc}') from exc
+
+SIM_DIR = _SIM_DIR_EXPLICIT if _SIM_DIR_EXPLICIT else _latest_sim_dir(BENDING_DIR)
+print(f'[CONFIG] SIM_DIR = {SIM_DIR}')
+RENDER_NUM = 3   # -1 all, 0 none, 1 last only, N evenly-spaced (default: 3)
+
+
+def _select_render_steps(available, render_num):
+    """Return the subset of *available* step indices to render.
+
+    render_num == -1 → all steps
+    render_num ==  0 → empty list (no renders)
+    render_num ==  1 → last step only
+    render_num ==  N → N evenly-spaced steps including first and last
+    """
+    if render_num == 0 or not available:
+        return []
+    if render_num == -1:
+        return list(available)
+    if render_num == 1:
+        return [available[-1]]
+    n = len(available)
+    if render_num >= n:
+        return list(available)
+    indices = np.round(np.linspace(0, n - 1, render_num)).astype(int)
+    return [available[i] for i in indices]
 
 # Vertex colorization
 # Set to None to use per-body solid colors (default).
@@ -135,9 +201,9 @@ BODY_COLORS = {
     2: (117.0 / 255.0, 76.0 / 255.0, 33.0 / 255.0, 1.0),   # dark wood  – female
 }
 
-# Output paths
-OUTPUT_DIR   = "/Users/quentinbecker/Research/kigumi-project/output/"
-OUTPUT_BLEND = "/Users/quentinbecker/Research/kigumi-project/output/scene.blend"
+# Output paths (default: alongside simulation data, in <SIM_DIR>/output)
+OUTPUT_DIR   = os.path.join(SIM_DIR, "output")
+OUTPUT_BLEND = os.path.join(OUTPUT_DIR, "scene.blend")
 
 # Render settings
 RENDER_ENGINE    = "CYCLES"  # "CYCLES", or "BLENDER_EEVEE_NEXT" for viewport-like rendering with good performance
@@ -146,6 +212,11 @@ RENDER_RES_Y     = 1080
 RENDER_SAMPLES   = 64
 # When False, skip image rendering and only run data/plot generation + .blend save.
 RENDER_IMAGES    = True
+
+# Simulation-level plotting (independent of COLORIZE_FIELD)
+PLOT_FORCE_EVOLUTION = True
+FORCE_PLOT_SIDESET = 1
+FORCE_PLOT_UNIT_LABEL = "kN  (GPa·mm²)"
 
 # ── TSAI-WU FAILURE CRITERION ─────────────────────────────────────────────────
 # Grain / fiber (L) and radial (R) directions in global model coordinates.
@@ -193,30 +264,15 @@ TSAI_WU_HIGHLIGHT_FAILURE = True
 # the loaded steps to OUTPUT_DIR/tsai_wu_evolution.png.
 TSAI_WU_PLOT_EVOLUTION = True
 
+# When True, generate one stress-cloud PNG per step (sigma_i vs sigma_j plane
+# overlaid on failure envelopes).  Saved to OUTPUT_DIR/stress_cloud_step_NNN.png.
+STRESS_CLOUD_PLOT = True
+# True  -> normalised axes (sigma/scale); False -> physical MPa axes
+STRESS_CLOUD_NORMALISE = True
+# Which two stress components to display (0-5: sigmaL, sigmaR, sigmaT, tauRT, tauLT, tauLR)
+STRESS_CLOUD_SLICE_AXES = (0, 1)  # (sigmaL, sigmaR) plane
+
 # ── VTU PARSER ────────────────────────────────────────────────────────────────
-
-# Map VTK XML type names → numpy dtypes
-_VTK_DTYPE = {
-    "Float32": np.float32, "Float64": np.float64,
-    "Int8":  np.int8,   "Int16":  np.int16,
-    "Int32": np.int32,  "Int64":  np.int64,
-    "UInt8": np.uint8,  "UInt16": np.uint16,
-    "UInt32": np.uint32, "UInt64": np.uint64,
-}
-
-
-def _decode_array(data_array_elem, dtype=None):
-    """Decode a base64 binary DataArray (VTK XML format="binary", header_type=UInt64).
-
-    If *dtype* is None the type declared in the element's ``type`` attribute is used.
-    """
-    if dtype is None:
-        dtype = _VTK_DTYPE[data_array_elem.attrib["type"]]
-    b64 = data_array_elem.text.strip()
-    raw = base64.b64decode(b64)
-    # First 8 bytes = UInt64 data length in bytes
-    raw = raw[8:]
-    return np.frombuffer(raw, dtype=dtype)
 
 
 def load_surface_vtu(path):
@@ -229,48 +285,8 @@ def load_surface_vtu(path):
     faces : list of lists – polygon face indices (triangles / quads)
     body_ids : (N,) int64  – per-vertex body id (1 or 2)
     """
-    tree = ET.parse(path)
-    root = tree.getroot()
-    piece = root.find(".//Piece")
-    n_pts   = int(piece.attrib["NumberOfPoints"])
-    n_cells = int(piece.attrib["NumberOfCells"])
-
-    # ---------- vertices (reference positions) ----------
-    pts_elem = piece.find("Points/DataArray")
-    pts_flat = _decode_array(pts_elem)
-    verts = pts_flat.reshape(n_pts, 3).astype(np.float64)
-
-    # ---------- cells -------------------------------------------------------
-    cells_elem  = piece.find("Cells")
-    conn_elem   = cells_elem.find("DataArray[@Name='connectivity']")
-    off_elem    = cells_elem.find("DataArray[@Name='offsets']")
-
-    connectivity = _decode_array(conn_elem)
-    offsets      = _decode_array(off_elem)
-
-    faces = []
-    prev  = 0
-    for off in offsets:
-        vids = connectivity[prev:int(off)].tolist()
-        # keep triangles and quads; skip degenerate cells
-        if len(vids) >= 3:
-            faces.append(vids)
-        prev = int(off)
-
-    # ---------- solution (displacement) – keep raw copy then add to verts ----
-    sol_elem = piece.find(".//*[@Name='solution']")
-    raw_solution = None
-    if sol_elem is not None:
-        ncomp        = int(sol_elem.attrib.get("NumberOfComponents", 3))
-        raw_solution = _decode_array(sol_elem).reshape(n_pts, ncomp).astype(np.float64)
-        verts        = verts + raw_solution[:, :3]
-
-    # ---------- body ids (per vertex) – stored as Float64 in this output ----
-    body_elem = piece.find(".//*[@Name='body_ids']")
-    if body_elem is not None:
-        body_ids = np.round(_decode_array(body_elem).astype(np.float64)).astype(np.int64)
-    else:
-        body_ids = np.ones(n_pts, dtype=np.int64)
+    piece, verts, faces, body_ids, raw_solution = load_surface_mesh_data(path)
+    n_pts = len(verts)
 
     # ---------- requested scalar field (optional) ----------------------------
     scalars       = None
@@ -285,248 +301,8 @@ def load_surface_vtu(path):
 
 # ── SCALAR FIELD EXTRACTION ───────────────────────────────────────────────────
 
-# Stress field name conventions across PolyFEM versions.
-# PolyFEM writes tensor components as {name}_{i}{j} (0-indexed row/col).
-# In 3D: stress_00=σxx, stress_11=σyy, stress_22=σzz,
-#        stress_01=σxy, stress_02=σxz, stress_12=σyz
-_STRESS_VOIGT = [
-    # PolyFEM tensor_values output (primary)
-    ('stress_00', 'stress_11', 'stress_22', 'stress_01', 'stress_02', 'stress_12'),
-    # Alternate names used by some assembler implementations
-    ('cauchy_stess_00', 'cauchy_stess_11', 'cauchy_stess_22',
-     'cauchy_stess_01', 'cauchy_stess_02', 'cauchy_stess_12'),
-    # Legacy / user-defined names
-    ('sigma_xx', 'sigma_yy', 'sigma_zz', 'sigma_xy', 'sigma_xz', 'sigma_yz'),
-    ('stress_xx', 'stress_yy', 'stress_zz', 'stress_xy', 'stress_xz', 'stress_yz'),
-]
-
-
 def _load_volume_element_scalar(surf_vtu_path, field_name, surf_verts, surf_faces):
-    """
-    Load a scalar field from the sibling volume VTU (step_N.vtu) and assign
-    one value per surface *face* by mapping each face centroid to the nearest
-    element (tetrahedron) centroid.  No per-vertex smoothing is performed.
-
-    Returns (per_face_scalars, 'FACE') or (None, 'FACE').
-    """
-    vol_path = surf_vtu_path.replace('_surf.vtu', '.vtu')
-    if not os.path.isfile(vol_path):
-        print(f'[WARN] Volume VTU not found: {vol_path}')
-        return None, 'FACE'
-
-    print(f'  Loading volume VTU for per-element "{field_name}": {os.path.basename(vol_path)}')
-    root  = ET.parse(vol_path).getroot()
-    piece = root.find('.//Piece')
-    n_vol = int(piece.attrib['NumberOfPoints'])
-
-    # Deformed node positions
-    vol_pts = _decode_array(piece.find('Points/DataArray')).reshape(n_vol, 3).astype(np.float64)
-    sol_elem = piece.find(".//*[@Name='solution']")
-    if sol_elem is not None:
-        ncomp   = int(sol_elem.attrib.get('NumberOfComponents', 3))
-        sol     = _decode_array(sol_elem).reshape(n_vol, ncomp).astype(np.float64)
-        vol_pts = vol_pts + sol[:, :3]
-
-    # Per-node scalar field
-    sc_elem = piece.find(f".//*[@Name='{field_name}']")
-    if sc_elem is None:
-        print(f'[WARN] Field "{field_name}" not found in volume VTU.')
-        return None, 'FACE'
-    node_scalars = _decode_array(sc_elem).astype(np.float64)
-
-    # Build per-element centroid and scalar by averaging over element nodes
-    cells_elem = piece.find('Cells')
-    conn = _decode_array(cells_elem.find("DataArray[@Name='connectivity']")).astype(np.int64)
-    offs = _decode_array(cells_elem.find("DataArray[@Name='offsets']")).astype(np.int64)
-
-    tet_centroids = []
-    tet_scalars   = []
-    prev = 0
-    for off in offs:
-        nids = conn[prev:int(off)]
-        tet_centroids.append(vol_pts[nids].mean(axis=0))
-        tet_scalars.append(node_scalars[nids].mean())
-        prev = int(off)
-    tet_centroids = np.array(tet_centroids)
-    tet_scalars   = np.array(tet_scalars)
-
-    # Per-surface-face centroid
-    face_centroids = np.array([surf_verts[np.array(f)].mean(axis=0) for f in surf_faces])
-
-    # Map each surface face to the nearest element centroid
-    try:
-        from scipy.spatial import KDTree
-        _, idx = KDTree(tet_centroids).query(face_centroids, k=1)
-    except ImportError:
-        idx = np.argmin(
-            np.sum((tet_centroids[np.newaxis] - face_centroids[:, np.newaxis]) ** 2, axis=2),
-            axis=1)
-    return tet_scalars[idx], 'FACE'
-
-
-# ── TSAI-WU IMPLEMENTATION ────────────────────────────────────────────────────
-
-def _material_rotation(fiber_dir, radial_dir):
-    """
-    Build a (3, 3) rotation matrix Q whose rows are the orthonormal material
-    axes [L, R, T] expressed in global coordinates.  Applying Q to a global
-    stress tensor gives the tensor in the material frame:
-        S_mat = Q @ S_global @ Q.T
-    """
-    L = np.asarray(fiber_dir,  dtype=np.float64); L /= np.linalg.norm(L)
-    R = np.asarray(radial_dir, dtype=np.float64)
-    R -= np.dot(R, L) * L                          # Gram-Schmidt
-    R /= np.linalg.norm(R)
-    T = np.cross(L, R)
-    return np.array([L, R, T])                      # (3, 3)
-
-
-def _tsai_wu_coefficients(s):
-    """
-    Pre-compute the Tsai-Wu tensor components from a strength dictionary.
-
-    3D criterion (Tsai & Wu, 1971; AFWAL-TR-85-3014):
-        FI = F_i σ_i  +  F_ij σ_i σ_j   (failure when FI ≥ 1)
-
-    In Voigt notation with axes ordered (L, R, T, RT, LT, LR):
-        Linear (distinguish tension from compression):
-            F1 = 1/Xt – 1/Xc,  F2 = 1/Yt – 1/Yc,  F3 = 1/Zt – 1/Zc
-            F4 = F5 = F6 = 0   (shear response is symmetric)
-        Quadratic diagonal:
-            F11 = 1/(Xt Xc),  F22 = 1/(Yt Yc),  F33 = 1/(Zt Zc)
-            F44 = 1/Srt²,     F55 = 1/Slt²,     F66 = 1/Slr²
-        Off-diagonal (Tsai-Hahn approximation, ADA144274 p. 14):
-            Fij = F*ij √(Fii Fjj)   with F*ij = –0.5 (default)
-
-    Returns a flat tuple in the order used by _tsai_wu_from_stress_tensors.
-    """
-    F1  = 1/s['Xt'] - 1/s['Xc']
-    F2  = 1/s['Yt'] - 1/s['Yc']
-    F3  = 1/s['Zt'] - 1/s['Zc']
-    F11 = 1 / (s['Xt'] * s['Xc'])
-    F22 = 1 / (s['Yt'] * s['Yc'])
-    F33 = 1 / (s['Zt'] * s['Zc'])
-    F44 = 1 / s['Srt'] ** 2
-    F55 = 1 / s['Slt'] ** 2
-    F66 = 1 / s['Slr'] ** 2
-    F12 = s['Fstar_12'] * np.sqrt(F11 * F22)
-    F13 = s['Fstar_13'] * np.sqrt(F11 * F33)
-    F23 = s['Fstar_23'] * np.sqrt(F22 * F33)
-    return F1, F2, F3, F11, F22, F33, F44, F55, F66, F12, F13, F23
-
-
-def _tsai_wu_from_stress_tensors(S_global, strengths, fiber_dir, radial_dir):
-    """
-    Vectorised Tsai-Wu failure index for an array of Cauchy stress tensors.
-
-    Parameters
-    ----------
-    S_global : (N, 3, 3)  Cauchy stress tensors in the global frame
-    strengths : dict       TSAI_WU_STRENGTHS
-    fiber_dir, radial_dir : (3,) global directions of L and R material axes
-
-    Returns
-    -------
-    FI : (N,) float64  failure index (> 1 → predicted failure)
-    """
-    Q = _material_rotation(fiber_dir, radial_dir)               # (3, 3)
-    # Rotate all tensors at once: S_mat[n] = Q @ S_global[n] @ Q.T
-    S_mat = np.einsum('ij,njk,lk->nil', Q, S_global, Q)        # (N, 3, 3)
-
-    sL  = S_mat[:, 0, 0];  sR  = S_mat[:, 1, 1];  sT  = S_mat[:, 2, 2]
-    tRT = S_mat[:, 1, 2];  tLT = S_mat[:, 0, 2];  tLR = S_mat[:, 0, 1]
-
-    F1, F2, F3, F11, F22, F33, F44, F55, F66, F12, F13, F23 = \
-        _tsai_wu_coefficients(strengths)
-
-    return (F1*sL + F2*sR + F3*sT
-            + F11*sL**2 + F22*sR**2 + F33*sT**2
-            + F44*tRT**2 + F55*tLT**2 + F66*tLR**2
-            + 2*F12*sL*sR + 2*F13*sL*sT + 2*F23*sR*sT)
-
-
-def _load_volume_tsai_wu(surf_vtu_path, surf_verts, surf_faces):
-    """
-    Load the Cauchy stress tensor from the sibling volume VTU, compute the
-    Tsai-Wu failure index once per tetrahedron (using the element-average
-    stress tensor), then map values to surface faces via nearest tet centroid.
-
-    Prefers `cauchy_stess_avg_*` fields (element-averaged, nodally projected)
-    over `cauchy_stess_*` (raw nodal extrapolation) when both are present.
-
-    Returns (per_face_FI, 'FACE') or (None, 'FACE').
-    """
-    vol_path = surf_vtu_path.replace('_surf.vtu', '.vtu')
-    if not os.path.isfile(vol_path):
-        print(f'[WARN] Volume VTU not found for Tsai-Wu: {vol_path}')
-        return None, 'FACE'
-
-    print(f'  Loading volume VTU for Tsai-Wu: {os.path.basename(vol_path)}')
-    root  = ET.parse(vol_path).getroot()
-    piece = root.find('.//Piece')
-    n_vol = int(piece.attrib['NumberOfPoints'])
-
-    # Deformed node positions
-    vol_pts  = _decode_array(piece.find('Points/DataArray')).reshape(n_vol, 3).astype(np.float64)
-    sol_elem = piece.find(".//*[@Name='solution']")
-    if sol_elem is not None:
-        ncomp   = int(sol_elem.attrib.get('NumberOfComponents', 3))
-        sol     = _decode_array(sol_elem).reshape(n_vol, ncomp).astype(np.float64)
-        vol_pts = vol_pts + sol[:, :3]
-
-    # Load the three rows of the Cauchy stress tensor (prefer _avg variants)
-    def _row(name_avg, name_plain):
-        e = piece.find(f".//*[@Name='{name_avg}']")
-        if e is None:
-            e = piece.find(f".//*[@Name='{name_plain}']")
-        if e is None:
-            return None
-        return _decode_array(e).reshape(n_vol, 3).astype(np.float64)
-
-    row1 = _row('cauchy_stess_avg_1', 'cauchy_stess_1')
-    row2 = _row('cauchy_stess_avg_2', 'cauchy_stess_2')
-    row3 = _row('cauchy_stess_avg_3', 'cauchy_stess_3')
-
-    if row1 is None or row2 is None or row3 is None:
-        print('[WARN] Cauchy stress tensor rows not found in volume VTU.\n'
-              '       Enable them with  "tensor_values": true  in the PolyFEM config.')
-        return None, 'FACE'
-
-    # Per-node stress tensor: (n_vol, 3, 3)
-    S_nodes = np.stack([row1, row2, row3], axis=1)   # (n_vol, 3, 3)
-
-    # Build per-element centroid and average stress tensor
-    cells_elem = piece.find('Cells')
-    conn = _decode_array(cells_elem.find("DataArray[@Name='connectivity']")).astype(np.int64)
-    offs = _decode_array(cells_elem.find("DataArray[@Name='offsets']")).astype(np.int64)
-
-    tet_centroids = []
-    tet_stress    = []
-    prev = 0
-    for off in offs:
-        nids = conn[prev:int(off)]
-        tet_centroids.append(vol_pts[nids].mean(axis=0))
-        tet_stress.append(S_nodes[nids].mean(axis=0))   # average 3×3 tensor
-        prev = int(off)
-
-    tet_centroids = np.array(tet_centroids)   # (M, 3)
-    tet_stress    = np.array(tet_stress)      # (M, 3, 3)
-
-    # Tsai-Wu failure index per element
-    FI = _tsai_wu_from_stress_tensors(
-        tet_stress, TSAI_WU_STRENGTHS, TSAI_WU_FIBER_DIR, TSAI_WU_RADIAL_DIR)
-
-    # Map to surface faces via nearest tet centroid
-    face_centroids = np.array([surf_verts[np.array(f)].mean(axis=0) for f in surf_faces])
-    try:
-        from scipy.spatial import KDTree
-        _, idx = KDTree(tet_centroids).query(face_centroids, k=1)
-    except ImportError:
-        idx = np.argmin(
-            np.sum((tet_centroids[np.newaxis] - face_centroids[:, np.newaxis]) ** 2, axis=2),
-            axis=1)
-
-    return FI[idx], 'FACE'
+    return load_volume_element_scalar(surf_vtu_path, field_name, surf_verts, surf_faces)
 
 
 def extract_scalar_field(piece, field_name, n_pts, verts, raw_solution,                         vtu_path=None, surf_faces=None):
@@ -563,13 +339,9 @@ def extract_scalar_field(piece, field_name, n_pts, verts, raw_solution,         
             return _decode_array(vm_elem).astype(np.float64), 'POINT'
 
         # 2. Compute from individual Cauchy-stress components in surface VTU
-        for names in _STRESS_VOIGT:
-            elems = [piece.find(f".//*[@Name='{n}']") for n in names]
-            if all(e is not None for e in elems):
-                sxx, syy, szz, sxy, sxz, syz = [_decode_array(e) for e in elems]
-                vm = np.sqrt(0.5 * ((sxx - syy)**2 + (syy - szz)**2 + (szz - sxx)**2
-                                    + 6.0 * (sxy**2 + sxz**2 + syz**2)))
-                return vm.astype(np.float64), 'POINT'
+        vm = point_von_mises_from_piece(piece)
+        if vm is not None:
+            return vm, 'POINT'
 
         # 3. Fall back to the volume VTU: one value per tet, mapped to surface faces
         if vtu_path is not None and surf_faces is not None:
@@ -588,7 +360,9 @@ def extract_scalar_field(piece, field_name, n_pts, verts, raw_solution,         
         # Tsai-Wu failure index requires the full 3D Cauchy stress tensor,
         # which lives in the volume VTU (step_N.vtu) as cauchy_stess_[avg_]1/2/3.
         if vtu_path is not None and surf_faces is not None:
-            result, domain = _load_volume_tsai_wu(vtu_path, verts, surf_faces)
+            result, domain = load_volume_tsai_wu(
+                vtu_path, verts, surf_faces,
+                TSAI_WU_STRENGTHS, TSAI_WU_FIBER_DIR, TSAI_WU_RADIAL_DIR)
             if result is not None:
                 return result, domain
         print('[WARN] Tsai-Wu requires the sibling volume VTU (step_N.vtu) with\n'
@@ -631,80 +405,6 @@ def scalars_to_vertex_colors(scalars, cmap_name='viridis', clim=None):
     cmap   = _cm.get_cmap(cmap_name)
     colors = cmap(norm(scalars)).astype(np.float32)   # (N, 4) RGBA in [0,1]
     return colors
-
-
-# ── FAILURE EVOLUTION PLOT ───────────────────────────────────────────────────
-
-def plot_failure_evolution(step_data, output_dir):
-    """
-        Save a matplotlib figure to output_dir/tsai_wu_evolution.png showing,
-        for each provided step:
-      - Max Tsai-Wu failure index (left axis, red line)
-      - Mean Tsai-Wu failure index (left axis, orange dashed line)
-      - Fraction of surface faces with FI ≥ 1 (right axis, blue bars)
-    """
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as mticker
-
-    steps     = sorted(step_data.keys())
-    max_fi    = []
-    mean_fi   = []
-    frac_fail = []   # percent of faces with FI ≥ 1
-
-    for s in steps:
-        fi = step_data[s][3]   # scalars array (may be None)
-        if fi is None:
-            max_fi.append(np.nan)
-            mean_fi.append(np.nan)
-            frac_fail.append(np.nan)
-        else:
-            max_fi.append(float(fi.max()))
-            mean_fi.append(float(fi.mean()))
-            frac_fail.append(float((fi >= 1.0).mean()) * 100.0)
-
-    fig, ax1 = plt.subplots(figsize=(8, 5))
-    ax2 = ax1.twinx()
-
-    ax1.plot(steps, max_fi,  'o-',  color='crimson',    linewidth=2,   label='Max FI')
-    ax1.plot(steps, mean_fi, 's--', color='darkorange',  linewidth=1.5, label='Mean FI')
-    ax1.axhline(1.0, color='crimson', linestyle=':', linewidth=1.2,
-                alpha=0.7, label='FI = 1 (failure threshold)')
-
-    bar_width = max(0.3, (max(steps) - min(steps)) * 0.06) if len(steps) > 1 else 0.4
-    ax2.bar(steps, frac_fail, width=bar_width, alpha=0.25,
-            color='steelblue', label='% faces failed (FI ≥ 1)')
-
-    ax1.set_xlabel('Simulation step', fontsize=11)
-    ax1.set_ylabel('Tsai-Wu failure index (FI)', fontsize=11)
-    ax2.set_ylabel('Faces with FI ≥ 1 (%)', color='steelblue', fontsize=11)
-    ax2.tick_params(axis='y', labelcolor='steelblue')
-    ax2.yaxis.set_major_formatter(mticker.FormatStrFormatter('%.1f %%'))
-    ax2.set_ylim(bottom=0)
-
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=9)
-
-    ax1.set_title('Tsai-Wu failure criterion evolution', fontsize=13)
-    ax1.set_xticks(steps)
-    plt.tight_layout()
-
-    out_path = os.path.join(output_dir, 'tsai_wu_evolution.png')
-    plt.savefig(out_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    print(f'Tsai-Wu evolution plot saved → {out_path}')
-
-
-def find_available_steps(sim_dir):
-    """Return sorted step ids detected from step_*_surf.vtu files in sim_dir."""
-    steps = []
-    for path in glob.glob(os.path.join(sim_dir, 'step_*_surf.vtu')):
-        name = os.path.basename(path)
-        try:
-            steps.append(int(name[len('step_'):-len('_surf.vtu')]))
-        except ValueError:
-            continue
-    return sorted(set(steps))
 
 
 # ── BLENDER HELPERS ───────────────────────────────────────────────────────────
@@ -937,10 +637,13 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     scene = bpy.context.scene
     scene.render.image_settings.file_format = "PNG"
+    available_steps = find_available_steps(SIM_DIR)
+    steps_to_render = _select_render_steps(available_steps, RENDER_NUM)
+    print(f'[CONFIG] RENDER_NUM={RENDER_NUM} → rendering steps: {steps_to_render}')
 
     # ── pass 1: load all steps to determine global color limits ──────────────
     step_data = {}   # step → (verts, faces, body_ids, scalars, scalar_domain)
-    for step in STEPS:
+    for step in steps_to_render:
         vtu_path = os.path.join(SIM_DIR, f"step_{step}_surf.vtu")
         if not os.path.isfile(vtu_path):
             print(f"[WARN] Not found: {vtu_path}")
@@ -968,9 +671,42 @@ def main():
         clim = [0.0, 1.0]
         print('Tsai-Wu failure highlighting active: colormap clamped to [0, 1]')
 
+    if PLOT_FORCE_EVOLUTION:
+        if not available_steps:
+            print(f"[WARN] No step_*_surf.vtu files found in: {SIM_DIR}")
+        else:
+            print(f'Building force evolution from all available steps: {available_steps}')
+            save_force_evolution_plot(
+                SIM_DIR,
+                OUTPUT_DIR,
+                available_steps,
+                sideset_id=FORCE_PLOT_SIDESET,
+                force_unit_label=FORCE_PLOT_UNIT_LABEL,
+            )
+
+    if STRESS_CLOUD_PLOT:
+        if not available_steps:
+            print(f"[WARN] No step_*_surf.vtu files found in: {SIM_DIR}")
+        else:
+            print(f'Building stress clouds for {len(available_steps)} steps ...')
+            _STRESS_KEYS = frozenset(
+                ['Xt', 'Xc', 'Yt', 'Yc', 'Zt', 'Zc', 'Slr', 'Slt', 'Srt'])
+            _strengths_mpa = {
+                k: (v * 1000 if k in _STRESS_KEYS else v)
+                for k, v in TSAI_WU_STRENGTHS.items()
+            }
+            generate_stress_clouds(
+                SIM_DIR, OUTPUT_DIR,
+                TSAI_WU_FIBER_DIR, TSAI_WU_RADIAL_DIR,
+                _strengths_mpa,
+                steps=available_steps,
+                normalise=STRESS_CLOUD_NORMALISE,
+                slice_axes=STRESS_CLOUD_SLICE_AXES,
+            )
+
     # Failure evolution plot (Tsai-Wu only, independent of rendering)
     if COLORIZE_FIELD == 'tsai_wu' and TSAI_WU_PLOT_EVOLUTION:
-        plot_steps = find_available_steps(SIM_DIR)
+        plot_steps = available_steps
         if not plot_steps:
             print(f"[WARN] No step_*_surf.vtu files found in: {SIM_DIR}")
         else:
